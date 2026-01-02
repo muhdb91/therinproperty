@@ -32,6 +32,7 @@ export interface Lead {
   agentReferral: string;
   countryState: string;
   timestamp: string;
+  status: 'New' | 'Contacted' | 'Closed' | 'Lost';
 }
 
 export interface SiteConfig {
@@ -42,6 +43,7 @@ export interface SiteConfig {
   aboutText: string;
   adsEnabled: boolean;
   ads: AdItem[];
+  notificationEmail: string;
 }
 
 export type ViewState = 'public' | 'admin' | 'property-detail' | 'gallery' | 'about' | 'contact';

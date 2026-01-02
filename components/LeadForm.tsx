@@ -4,7 +4,8 @@ import { Property, Lead } from '../types';
 
 interface LeadFormProps {
   property: Property;
-  onSubmit: (lead: Omit<Lead, 'id' | 'timestamp'>) => void;
+  // Fix: Omit 'status' from the expected lead data to match the implementation in App.tsx where status is assigned internally as 'New'
+  onSubmit: (lead: Omit<Lead, 'id' | 'timestamp' | 'status'>) => void;
 }
 
 const LeadForm: React.FC<LeadFormProps> = ({ property, onSubmit }) => {

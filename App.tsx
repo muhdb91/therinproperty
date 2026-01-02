@@ -53,81 +53,6 @@ const INITIAL_PROPERTIES: Property[] = [
     sqft: 6800,
     imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=800&auto=format&fit=crop',
     status: 'Available'
-  },
-  {
-    id: '4',
-    title: 'Skyline Penthouse',
-    description: 'Elite urban living with private terrace overlooking the downtown skyline.',
-    price: 2100000,
-    location: 'New York, NY',
-    beds: 2,
-    baths: 2,
-    carParks: 1,
-    propertyType: 'Penthouse',
-    lotType: 'Leasehold',
-    sqft: 1800,
-    imageUrl: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?q=80&w=800&auto=format&fit=crop',
-    status: 'Available'
-  },
-  {
-    id: '5',
-    title: 'Suburban Serenity',
-    description: 'Perfect family home with a spacious backyard and modern kitchen upgrades.',
-    price: 650000,
-    location: 'Austin, TX',
-    beds: 4,
-    baths: 2,
-    carParks: 2,
-    propertyType: 'Semi-D',
-    lotType: 'Freehold',
-    sqft: 2800,
-    imageUrl: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?q=80&w=800&auto=format&fit=crop',
-    status: 'Available'
-  },
-  {
-    id: '6',
-    title: 'Historic Victorian',
-    description: 'Character-filled residence with original woodwork and updated systems.',
-    price: 920000,
-    location: 'Savannah, GA',
-    beds: 3,
-    baths: 3,
-    carParks: 2,
-    propertyType: 'Terrace',
-    lotType: 'Freehold',
-    sqft: 3100,
-    imageUrl: 'https://images.unsplash.com/photo-1572120360610-d971b9d7767c?q=80&w=800&auto=format&fit=crop',
-    status: 'Sold'
-  },
-  {
-    id: '7',
-    title: 'Desert Oasis',
-    description: 'Indoor-outdoor living at its peak in this Scottsdale retreat.',
-    price: 1550000,
-    location: 'Scottsdale, AZ',
-    beds: 4,
-    baths: 4,
-    carParks: 3,
-    propertyType: 'Villa',
-    lotType: 'Freehold',
-    sqft: 4200,
-    imageUrl: 'https://images.unsplash.com/photo-1480074568708-e7b720bb3f09?q=80&w=800&auto=format&fit=crop',
-    status: 'Available'
-  },
-  {
-    id: '8',
-    title: 'Lakefront Modern',
-    description: 'Sleek design with direct lake access and private boat house.',
-    price: 1890000,
-    location: 'Lake Tahoe, CA',
-    beds: 5,
-    baths: 4,
-    carParks: 2,
-    propertyType: 'Bungalow',
-    lotType: 'Freehold',
-    sqft: 3800,
-    imageUrl: 'https://images.unsplash.com/photo-1416331108676-a22ccb276e35?q=80&w=800&auto=format&fit=crop',
-    status: 'Available'
   }
 ];
 
@@ -141,7 +66,8 @@ const DEFAULT_CONFIG: SiteConfig = {
   ads: [
     { id: 'ad1', imageUrl: 'https://images.unsplash.com/photo-1449844908441-8829872d2607?q=80&w=1200', title: 'Luxury Condos Launching Q3', link: '#' },
     { id: 'ad2', imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=1200', title: 'Summer Sale: Zero Entry Fees', link: '#' }
-  ]
+  ],
+  notificationEmail: 'mailtherin@gmail.com'
 };
 
 const App: React.FC = () => {
@@ -163,6 +89,8 @@ const App: React.FC = () => {
   });
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
 
+  const [contactForm, setContactForm] = useState({ name: '', email: '', message: '', phone: '', location: '', referral: '' });
+
   useEffect(() => {
     localStorage.setItem('therin_properties', JSON.stringify(properties));
     localStorage.setItem('therin_leads', JSON.stringify(leads));
@@ -173,13 +101,11 @@ const App: React.FC = () => {
     let result = properties.filter(p => 
       p.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
-
     if (priceSort === 'low-high') {
       result = [...result].sort((a, b) => a.price - b.price);
     } else if (priceSort === 'high-low') {
       result = [...result].sort((a, b) => b.price - a.price);
     }
-
     return result;
   }, [properties, searchQuery, priceSort]);
 
@@ -198,9 +124,36 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAddLead = (leadData: Omit<Lead, 'id' | 'timestamp'>) => {
-    const newLead: Lead = { ...leadData, id: Date.now().toString(), timestamp: new Date().toISOString() };
+  const handleUpdateLeadStatus = (id: string, status: Lead['status']) => {
+    setLeads(leads.map(l => l.id === id ? { ...l, status } : l));
+  };
+
+  const handleAddLead = (leadData: Omit<Lead, 'id' | 'timestamp' | 'status'>) => {
+    const newLead: Lead = { 
+      ...leadData, 
+      id: Date.now().toString(), 
+      timestamp: new Date().toISOString(),
+      status: 'New'
+    };
     setLeads([newLead, ...leads]);
+    
+    // Simulation of Push Notification to Admin Email
+    console.log(`Pushing lead alert to ${config.notificationEmail}...`);
+  };
+
+  const handleContactSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleAddLead({
+      name: contactForm.name,
+      email: contactForm.email,
+      phone: contactForm.phone || 'N/A',
+      countryState: contactForm.location || 'N/A',
+      propertyId: 'GENERAL',
+      propertyName: 'General Inquiry',
+      agentReferral: contactForm.referral || 'Website Form'
+    });
+    alert(`Thank you ${contactForm.name}! Your message has been received and saved to our dashboard. Referral recorded: ${contactForm.referral || 'N/A'}`);
+    setContactForm({ name: '', email: '', message: '', phone: '', location: '', referral: '' });
   };
 
   const renderContent = () => {
@@ -209,23 +162,13 @@ const App: React.FC = () => {
         return (
           <div className="max-w-7xl mx-auto p-4 md:p-8">
             {config.adsEnabled && <AdCarousel ads={config.ads} />}
-            
             <header className="mb-8 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <h1 className="text-4xl font-extrabold text-gray-900 mb-2">
-                  Featured <span className="text-blue-700">Listings</span>
-                </h1>
+                <h1 className="text-4xl font-extrabold text-gray-900 mb-2">Featured <span className="text-blue-700">Listings</span></h1>
                 <p className="text-gray-500">Luxury living curated by {config.siteName}.</p>
               </div>
             </header>
-
-            <SearchBar 
-              searchValue={searchQuery} 
-              onSearchChange={setSearchQuery}
-              sortValue={priceSort}
-              onSortChange={setPriceSort}
-            />
-            
+            <SearchBar searchValue={searchQuery} onSearchChange={setSearchQuery} sortValue={priceSort} onSortChange={setPriceSort} />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {filteredAndSortedProperties.length > 0 ? (
                 filteredAndSortedProperties.map(p => (
@@ -246,9 +189,7 @@ const App: React.FC = () => {
             <h2 className="text-3xl font-bold mb-8">Property Gallery</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {properties.map(p => (
-                <div key={p.id} className="h-64 rounded-xl overflow-hidden shadow-md">
-                  <img src={p.imageUrl} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" alt={p.title} />
-                </div>
+                <div key={p.id} className="h-64 rounded-xl overflow-hidden shadow-md"><img src={p.imageUrl} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" alt={p.title} /></div>
               ))}
             </div>
           </div>
@@ -279,11 +220,16 @@ const App: React.FC = () => {
               </div>
               <div className="p-12">
                 <h3 className="text-2xl font-bold mb-6 text-gray-900">Send an Inquiry</h3>
-                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); alert("Inquiry sent!"); }}>
-                  <input type="text" placeholder="Your Name" className="w-full p-3 border rounded-lg" required />
-                  <input type="email" placeholder="Your Email" className="w-full p-3 border rounded-lg" required />
-                  <textarea placeholder="How can we help?" rows={4} className="w-full p-3 border rounded-lg"></textarea>
-                  <button className="bg-blue-700 text-white w-full py-3 rounded-lg font-bold shadow-lg shadow-blue-200">Submit Inquiry</button>
+                <form className="space-y-4" onSubmit={handleContactSubmit}>
+                  <div className="grid grid-cols-2 gap-4">
+                    <input type="text" placeholder="Your Name" className="w-full p-3 border rounded-lg" required value={contactForm.name} onChange={e => setContactForm({...contactForm, name: e.target.value})} />
+                    <input type="tel" placeholder="Phone Number" className="w-full p-3 border rounded-lg" value={contactForm.phone} onChange={e => setContactForm({...contactForm, phone: e.target.value})} />
+                  </div>
+                  <input type="email" placeholder="Your Email" className="w-full p-3 border rounded-lg" required value={contactForm.email} onChange={e => setContactForm({...contactForm, email: e.target.value})} />
+                  <input type="text" placeholder="Your Location (State/Country)" className="w-full p-3 border rounded-lg" value={contactForm.location} onChange={e => setContactForm({...contactForm, location: e.target.value})} />
+                  <input type="text" placeholder="Referral Code / Number (Optional)" className="w-full p-3 border rounded-lg" value={contactForm.referral} onChange={e => setContactForm({...contactForm, referral: e.target.value})} />
+                  <textarea placeholder="How can we help?" rows={3} className="w-full p-3 border rounded-lg" value={contactForm.message} onChange={e => setContactForm({...contactForm, message: e.target.value})}></textarea>
+                  <button type="submit" className="bg-blue-700 text-white w-full py-3 rounded-lg font-bold shadow-lg shadow-blue-200 hover:bg-blue-800 transition-all">Submit Inquiry</button>
                 </form>
               </div>
             </div>
@@ -296,70 +242,26 @@ const App: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-8">
                 <img src={selectedProperty.imageUrl} className="w-full h-[500px] object-cover rounded-3xl shadow-xl" alt={selectedProperty.title} />
-                
                 <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
                   <div className="flex justify-between items-start mb-6">
                     <div>
-                      <span className="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">
-                        {selectedProperty.propertyType} • {selectedProperty.lotType}
-                      </span>
+                      <span className="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-2 inline-block">{selectedProperty.propertyType} • {selectedProperty.lotType}</span>
                       <h2 className="text-4xl font-bold text-gray-900">{selectedProperty.title}</h2>
                       <p className="text-gray-500 text-lg mt-1"><i className="fas fa-map-marker-alt mr-2"></i>{selectedProperty.location}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-3xl font-black text-blue-700">${selectedProperty.price.toLocaleString()}</p>
-                      <p className="text-gray-400 text-sm font-medium">Available Now</p>
-                    </div>
+                    <div className="text-right"><p className="text-3xl font-black text-blue-700">${selectedProperty.price.toLocaleString()}</p></div>
                   </div>
-
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 py-8 border-y border-gray-100 my-8">
-                    <div className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl">
-                      <i className="fas fa-bed text-blue-500 text-xl mb-2"></i>
-                      <span className="text-lg font-bold">{selectedProperty.beds}</span>
-                      <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Bedrooms</span>
-                    </div>
-                    <div className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl">
-                      <i className="fas fa-bath text-blue-500 text-xl mb-2"></i>
-                      <span className="text-lg font-bold">{selectedProperty.baths}</span>
-                      <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Bathrooms</span>
-                    </div>
-                    <div className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl">
-                      <i className="fas fa-car text-blue-500 text-xl mb-2"></i>
-                      <span className="text-lg font-bold">{selectedProperty.carParks}</span>
-                      <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Car Parks</span>
-                    </div>
-                    <div className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl">
-                      <i className="fas fa-expand-arrows-alt text-blue-500 text-xl mb-2"></i>
-                      <span className="text-lg font-bold">{selectedProperty.sqft}</span>
-                      <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Sq. Ft.</span>
-                    </div>
-                    <div className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl">
-                      <i className="fas fa-file-contract text-blue-500 text-xl mb-2"></i>
-                      <span className="text-sm font-bold truncate max-w-full">{selectedProperty.lotType}</span>
-                      <span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Lot Type</span>
-                    </div>
+                    <div className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl"><i className="fas fa-bed text-blue-500 text-xl mb-2"></i><span className="text-lg font-bold">{selectedProperty.beds}</span><span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Bedrooms</span></div>
+                    <div className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl"><i className="fas fa-bath text-blue-500 text-xl mb-2"></i><span className="text-lg font-bold">{selectedProperty.baths}</span><span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Bathrooms</span></div>
+                    <div className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl"><i className="fas fa-car text-blue-500 text-xl mb-2"></i><span className="text-lg font-bold">{selectedProperty.carParks}</span><span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Car Parks</span></div>
+                    <div className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl"><i className="fas fa-expand-arrows-alt text-blue-500 text-xl mb-2"></i><span className="text-lg font-bold">{selectedProperty.sqft}</span><span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Sq. Ft.</span></div>
+                    <div className="flex flex-col items-center p-4 bg-gray-50 rounded-2xl"><i className="fas fa-file-contract text-blue-500 text-xl mb-2"></i><span className="text-sm font-bold truncate max-w-full">{selectedProperty.lotType}</span><span className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Lot Type</span></div>
                   </div>
-                  
-                  <div>
-                    <h4 className="text-xl font-bold mb-4">Property Description</h4>
-                    <p className="text-gray-600 text-lg leading-relaxed whitespace-pre-line">{selectedProperty.description}</p>
-                  </div>
+                  <div><h4 className="text-xl font-bold mb-4">Property Description</h4><p className="text-gray-600 text-lg leading-relaxed whitespace-pre-line">{selectedProperty.description}</p></div>
                 </div>
               </div>
-              
-              <div className="lg:col-span-1">
-                <div className="sticky top-24">
-                  <LeadForm property={selectedProperty} onSubmit={handleAddLead} />
-                  <div className="mt-8 p-6 bg-blue-50 rounded-3xl border border-blue-100">
-                    <h4 className="font-bold text-blue-900 mb-2">Investment Highlights</h4>
-                    <ul className="text-sm text-blue-700 space-y-3">
-                      <li className="flex gap-2"><i className="fas fa-check-circle mt-1"></i> Certified high-value growth area</li>
-                      <li className="flex gap-2"><i className="fas fa-check-circle mt-1"></i> Prime connectivity in {selectedProperty.location}</li>
-                      <li className="flex gap-2"><i className="fas fa-check-circle mt-1"></i> Modern architectural integrity</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              <div className="lg:col-span-1"><div className="sticky top-24"><LeadForm property={selectedProperty} onSubmit={handleAddLead} /></div></div>
             </div>
           </div>
         ) : null;
@@ -368,11 +270,12 @@ const App: React.FC = () => {
           <CMSPanel 
             properties={properties} 
             leads={leads} 
-            siteConfig={config}
-            onUpdateProperty={handleUpdateProperty}
-            onAddProperty={handleAddProperty}
-            onDeleteProperty={handleDeleteProperty}
+            siteConfig={config} 
+            onUpdateProperty={handleUpdateProperty} 
+            onAddProperty={handleAddProperty} 
+            onDeleteProperty={handleDeleteProperty} 
             onUpdateConfig={setConfig}
+            onUpdateLeadStatus={handleUpdateLeadStatus}
           />
         );
       default:
@@ -386,32 +289,9 @@ const App: React.FC = () => {
       <main className="flex-grow">{renderContent()}</main>
       <footer className="bg-white border-t border-gray-100 py-12">
         <div className="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-12">
-          <div>
-            <h4 className="font-bold text-xl mb-4 text-blue-900 flex items-center gap-2">
-               <i className="fas fa-building"></i> {config.siteName}
-            </h4>
-            <p className="text-gray-500 text-sm leading-relaxed">{config.footerText}</p>
-          </div>
-          <div>
-            <h4 className="font-bold mb-4 text-gray-900 uppercase tracking-widest text-xs">Quick Navigation</h4>
-            <div className="flex flex-col gap-3 text-sm text-gray-400">
-              <button onClick={() => setView('public')} className="text-left hover:text-blue-600 transition-colors">Browse Properties</button>
-              <button onClick={() => setView('gallery')} className="text-left hover:text-blue-600 transition-colors">Property Gallery</button>
-              <button onClick={() => setView('about')} className="text-left hover:text-blue-600 transition-colors">About the Agency</button>
-              <button onClick={() => setView('contact')} className="text-left hover:text-blue-600 transition-colors">Contact Agent</button>
-            </div>
-          </div>
-          <div className="text-left">
-            <h4 className="font-bold mb-4 text-gray-900 uppercase tracking-widest text-xs">Direct Contact</h4>
-            <div className="space-y-2">
-              <p className="text-gray-900 font-bold">{config.siteName}</p>
-              <p className="text-gray-500 text-sm flex items-center gap-2"><i className="fas fa-id-badge text-gray-400"></i> No. Agent {config.agentNo}</p>
-              <p className="text-gray-500 text-sm flex items-center gap-2"><i className="fas fa-phone-alt text-gray-400"></i> Phone: {config.phone}</p>
-            </div>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 mt-12 pt-8 border-t border-gray-50 text-center">
-           <p className="text-xs text-gray-300">© 2024 {config.siteName}. All rights reserved. Professional Real Estate Solutions.</p>
+          <div><h4 className="font-bold text-xl mb-4 text-blue-900 flex items-center gap-2"><i className="fas fa-building"></i> {config.siteName}</h4><p className="text-gray-500 text-sm leading-relaxed">{config.footerText}</p></div>
+          <div><h4 className="font-bold mb-4 text-gray-900 uppercase tracking-widest text-xs">Quick Navigation</h4><div className="flex flex-col gap-3 text-sm text-gray-400"><button onClick={() => setView('public')} className="text-left hover:text-blue-600 transition-colors">Browse Properties</button><button onClick={() => setView('gallery')} className="text-left hover:text-blue-600 transition-colors">Property Gallery</button><button onClick={() => setView('about')} className="text-left hover:text-blue-600 transition-colors">About the Agency</button><button onClick={() => setView('contact')} className="text-left hover:text-blue-600 transition-colors">Contact Agent</button></div></div>
+          <div className="text-left"><h4 className="font-bold mb-4 text-gray-900 uppercase tracking-widest text-xs">Direct Contact</h4><div className="space-y-2"><p className="text-gray-900 font-bold">{config.siteName}</p><p className="text-gray-500 text-sm flex items-center gap-2"><i className="fas fa-id-badge text-gray-400"></i> No. Agent {config.agentNo}</p><p className="text-gray-500 text-sm flex items-center gap-2"><i className="fas fa-phone-alt text-gray-400"></i> Phone: {config.phone}</p></div></div>
         </div>
       </footer>
     </div>
