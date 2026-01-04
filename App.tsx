@@ -7,6 +7,7 @@ import LeadForm from './components/LeadForm';
 import CMSPanel from './components/CMS/CMSPanel';
 import SearchBar from './components/SearchBar';
 import AdCarousel from './components/AdCarousel';
+import WhatsAppFloat from './components/WhatsAppFloat';
 
 const INITIAL_PROPERTIES: Property[] = [
   {
@@ -166,7 +167,29 @@ const App: React.FC = () => {
     localStorage.setItem('therin_properties', JSON.stringify(properties));
     localStorage.setItem('therin_leads', JSON.stringify(leads));
     localStorage.setItem('therin_config', JSON.stringify(config));
+    
+    // Listen for lead updates from other tabs (simulated real-time)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'therin_leads' && e.newValue) {
+        const newLeads = JSON.parse(e.newValue);
+        if (newLeads.length > leads.length) {
+          triggerBrowserNotification(newLeads[0]);
+        }
+        setLeads(newLeads);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [properties, leads, config]);
+
+  const triggerBrowserNotification = (lead: Lead) => {
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      new Notification("New Lead Captured! 🚀", {
+        body: `${lead.name} is interested in ${lead.propertyName}`,
+        icon: 'https://cdn-icons-png.flaticon.com/512/1067/1067566.png'
+      });
+    }
+  };
 
   const filteredAndSortedProperties = useMemo(() => {
     let result = properties.filter(p => 
@@ -206,8 +229,12 @@ const App: React.FC = () => {
       timestamp: new Date().toISOString(),
       status: 'New'
     };
-    setLeads([newLead, ...leads]);
-    console.log(`Pushing lead alert to ${config.notificationEmail}...`);
+    const updatedLeads = [newLead, ...leads];
+    setLeads(updatedLeads);
+    localStorage.setItem('therin_leads', JSON.stringify(updatedLeads));
+    
+    // Notify if permission is already granted
+    triggerBrowserNotification(newLead);
   };
 
   const handleContactSubmit = (e: React.FormEvent) => {
@@ -221,7 +248,7 @@ const App: React.FC = () => {
       propertyName: 'General Inquiry',
       agentReferral: contactForm.referral || 'Website Form'
     });
-    alert(`Thank you ${contactForm.name}! Your message has been received and saved to our dashboard. Referral recorded: ${contactForm.referral || 'N/A'}`);
+    alert(`Thank you ${contactForm.name}! Your inquiry has been received. Our team will contact you soon.`);
     setContactForm({ name: '', email: '', message: '', phone: '', location: '', referral: '' });
   };
 
@@ -255,10 +282,15 @@ const App: React.FC = () => {
       case 'gallery':
         return (
           <div className="max-w-7xl mx-auto p-8 text-center">
-            <h2 className="text-3xl font-bold mb-8">Property Gallery</h2>
+            <h2 className="text-3xl font-bold mb-8 uppercase tracking-widest text-blue-900">Portfolio Gallery</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {properties.map(p => (
-                <div key={p.id} className="h-64 rounded-xl overflow-hidden shadow-md"><img src={p.imageUrl} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" alt={p.title} /></div>
+                <div key={p.id} className="h-64 rounded-xl overflow-hidden shadow-md group relative">
+                   <img src={p.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={p.title} />
+                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <p className="text-white font-bold text-sm text-center px-4">{p.title}</p>
+                   </div>
+                </div>
               ))}
             </div>
           </div>
@@ -268,9 +300,9 @@ const App: React.FC = () => {
           <div className="max-w-3xl mx-auto p-8 py-20 text-center">
             <h2 className="text-4xl font-bold mb-8">About {config.siteName}</h2>
             <p className="text-xl text-gray-600 leading-relaxed mb-12 whitespace-pre-line">{config.aboutText}</p>
-            <div className="bg-blue-50 p-8 rounded-2xl border border-blue-100">
-              <p className="font-bold text-blue-800">Agent Registration</p>
-              <p className="text-2xl font-black text-blue-900">{config.agentNo}</p>
+            <div className="bg-blue-50 p-8 rounded-2xl border border-blue-100 shadow-sm">
+              <p className="font-bold text-blue-800 uppercase tracking-widest text-xs mb-2">Registered Agency Profile</p>
+              <p className="text-2xl font-black text-blue-900">License: {config.agentNo}</p>
             </div>
           </div>
         );
@@ -280,7 +312,7 @@ const App: React.FC = () => {
             <div className="bg-white rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-2">
               <div className="bg-blue-700 p-12 text-white">
                 <h2 className="text-4xl font-bold mb-6">Contact Us</h2>
-                <p className="mb-12 opacity-80 text-lg">We are here to help you find your next residence.</p>
+                <p className="mb-12 opacity-80 text-lg">Our elite real estate specialists are ready to assist you.</p>
                 <div className="space-y-6">
                   <div className="flex items-center gap-4"><i className="fas fa-phone-alt text-xl"></i> {config.phone}</div>
                   <div className="flex items-center gap-4"><i className="fas fa-id-badge text-xl"></i> {config.agentNo}</div>
@@ -341,6 +373,7 @@ const App: React.FC = () => {
           <div className="text-left"><h4 className="font-bold mb-4 text-gray-900 uppercase tracking-widest text-xs">Direct Contact</h4><div className="space-y-2"><p className="text-gray-900 font-bold">{config.siteName}</p><p className="text-gray-500 text-sm flex items-center gap-2"><i className="fas fa-id-badge text-gray-400"></i> No. Agent {config.agentNo}</p><p className="text-gray-500 text-sm flex items-center gap-2"><i className="fas fa-phone-alt text-gray-400"></i> Phone: {config.phone}</p></div></div>
         </div>
       </footer>
+      <WhatsAppFloat phone={config.phone} agentName={config.siteName} />
     </div>
   );
 };

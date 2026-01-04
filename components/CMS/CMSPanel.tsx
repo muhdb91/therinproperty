@@ -24,11 +24,14 @@ const CMSPanel: React.FC<CMSPanelProps> = ({
   onUpdateConfig,
   onUpdateLeadStatus
 }) => {
-  const [tab, setTab] = useState<'listings' | 'leads' | 'settings' | 'reports'>('listings');
+  const [tab, setTab] = useState<'listings' | 'leads' | 'ads' | 'settings' | 'reports'>('listings');
   const [editingProperty, setEditingProperty] = useState<Partial<Property> | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
+  const [notificationStatus, setNotificationStatus] = useState<NotificationPermission>(
+    typeof Notification !== 'undefined' ? Notification.permission : 'default'
+  );
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +39,18 @@ const CMSPanel: React.FC<CMSPanelProps> = ({
       setIsLoggedIn(true);
     } else {
       alert("Unauthorized Access Attempted.");
+    }
+  };
+
+  const requestNotificationPermission = async () => {
+    if (typeof Notification === 'undefined') {
+      alert("Notifications are not supported in this browser.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    setNotificationStatus(permission);
+    if (permission === 'granted') {
+      new Notification("Alerts Enabled!", { body: "You will now receive desktop notifications for new leads." });
     }
   };
 
@@ -163,6 +178,7 @@ const CMSPanel: React.FC<CMSPanelProps> = ({
         <div className="flex bg-white p-1.5 rounded-2xl self-start overflow-x-auto max-w-full no-scrollbar shadow-sm border border-gray-100">
           <button onClick={() => setTab('listings')} className={`px-6 py-2.5 rounded-xl transition-all whitespace-nowrap text-xs font-black uppercase tracking-widest ${tab === 'listings' ? 'bg-blue-700 text-white shadow-md' : 'text-gray-400 hover:text-gray-900'}`}>Inventory</button>
           <button onClick={() => setTab('leads')} className={`px-6 py-2.5 rounded-xl transition-all whitespace-nowrap text-xs font-black uppercase tracking-widest ${tab === 'leads' ? 'bg-blue-700 text-white shadow-md' : 'text-gray-400 hover:text-gray-900'}`}>Pipeline</button>
+          <button onClick={() => setTab('ads')} className={`px-6 py-2.5 rounded-xl transition-all whitespace-nowrap text-xs font-black uppercase tracking-widest ${tab === 'ads' ? 'bg-blue-700 text-white shadow-md' : 'text-gray-400 hover:text-gray-900'}`}>Ads</button>
           <button onClick={() => setTab('reports')} className={`px-6 py-2.5 rounded-xl transition-all whitespace-nowrap text-xs font-black uppercase tracking-widest ${tab === 'reports' ? 'bg-blue-700 text-white shadow-md' : 'text-gray-400 hover:text-gray-900'}`}>Analytics</button>
           <button onClick={() => setTab('settings')} className={`px-6 py-2.5 rounded-xl transition-all whitespace-nowrap text-xs font-black uppercase tracking-widest ${tab === 'settings' ? 'bg-blue-700 text-white shadow-md' : 'text-gray-400 hover:text-gray-900'}`}>Settings</button>
         </div>
@@ -261,6 +277,54 @@ const CMSPanel: React.FC<CMSPanelProps> = ({
         </div>
       )}
 
+      {tab === 'ads' && (
+        <div className="space-y-8 animate-in fade-in duration-500">
+          <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+            <div>
+              <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <i className="fas fa-bullhorn text-orange-500"></i> Ad Campaigns
+              </h2>
+              <p className="text-xs text-gray-400 mt-1">Manage the hero banners and sponsored content shown to visitors.</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Active Status</label>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={siteConfig.adsEnabled} onChange={(e) => onUpdateConfig({...siteConfig, adsEnabled: e.target.checked})}/>
+                <div className="w-12 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+          </div>
+          
+          <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${!siteConfig.adsEnabled ? 'opacity-40 pointer-events-none grayscale' : ''}`}>
+            {siteConfig.ads.map((ad, idx) => (
+              <div key={ad.id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm relative group overflow-hidden">
+                <div className="flex gap-4 items-start">
+                  <div className="w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gray-50 border border-gray-100">
+                    <img src={ad.imageUrl} className="w-full h-full object-cover" alt="" />
+                  </div>
+                  <div className="flex-grow space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Slide {idx + 1}</span>
+                      <button onClick={() => handleRemoveAd(ad.id)} className="text-red-400 hover:text-red-600 transition-colors"><i className="fas fa-trash-alt"></i></button>
+                    </div>
+                    <input type="text" placeholder="Banner Title" className="w-full text-xs p-2.5 border rounded-xl bg-gray-50 font-bold outline-none focus:bg-white focus:ring-2 focus:ring-blue-100" value={ad.title} onChange={(e) => handleUpdateAd(ad.id, 'title', e.target.value)}/>
+                    <input type="text" placeholder="Image URL" className="w-full text-[10px] p-2 border rounded-lg bg-gray-50 outline-none focus:bg-white" value={ad.imageUrl} onChange={(e) => handleUpdateAd(ad.id, 'imageUrl', e.target.value)}/>
+                    <input type="text" placeholder="Landing Link (e.g. #contact)" className="w-full text-[10px] p-2 border rounded-lg bg-gray-50 outline-none focus:bg-white" value={ad.link} onChange={(e) => handleUpdateAd(ad.id, 'link', e.target.value)}/>
+                  </div>
+                </div>
+              </div>
+            ))}
+            <button 
+              onClick={handleAddAd}
+              className="border-2 border-dashed border-gray-200 rounded-3xl p-10 flex flex-col items-center justify-center text-gray-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50/50 transition-all gap-4"
+            >
+              <i className="fas fa-plus-circle text-3xl"></i>
+              <p className="font-black text-xs uppercase tracking-widest">Add New Campaign Banner</p>
+            </button>
+          </div>
+        </div>
+      )}
+
       {tab === 'reports' && (
         <div className="space-y-8">
           <div className="flex justify-between items-center bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
@@ -290,8 +354,8 @@ const CMSPanel: React.FC<CMSPanelProps> = ({
               <p className="text-4xl font-black text-green-600">{leads.filter(l => l.status === 'Closed').length}</p>
             </div>
             <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Ads Active</p>
-              <p className="text-4xl font-black text-purple-600">{siteConfig.ads.length}</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Properties</p>
+              <p className="text-4xl font-black text-purple-600">{properties.length}</p>
             </div>
           </div>
         </div>
@@ -299,35 +363,31 @@ const CMSPanel: React.FC<CMSPanelProps> = ({
 
       {tab === 'settings' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-black flex items-center gap-2 text-gray-900">
-                <i className="fas fa-bullhorn text-orange-500"></i> Ad Campaigns
-              </h2>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" checked={siteConfig.adsEnabled} onChange={(e) => onUpdateConfig({...siteConfig, adsEnabled: e.target.checked})}/>
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-            
-            <div className={`space-y-6 ${!siteConfig.adsEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
-              <div className="flex justify-between items-center"><p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Active Slides ({siteConfig.ads.length})</p><button onClick={handleAddAd} className="text-[10px] bg-blue-50 text-blue-700 px-3 py-1 rounded-full font-black uppercase tracking-widest hover:bg-blue-100 transition-colors">+ Add Banner</button></div>
-              <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                {siteConfig.ads.map((ad, idx) => (
-                  <div key={ad.id} className="p-5 bg-gray-50 rounded-2xl border border-gray-100 space-y-3 relative group">
-                    <button onClick={() => handleRemoveAd(ad.id)} className="absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors"><i className="fas fa-times-circle"></i></button>
-                    <span className="text-[10px] font-black text-gray-300 uppercase">Slide {idx + 1}</span>
-                    <input type="text" placeholder="Title" className="w-full text-xs p-2 border rounded-lg bg-white outline-none focus:border-blue-500" value={ad.title} onChange={(e) => handleUpdateAd(ad.id, 'title', e.target.value)}/>
-                    <input type="text" placeholder="Image URL" className="w-full text-xs p-2 border rounded-lg bg-white outline-none focus:border-blue-500" value={ad.imageUrl} onChange={(e) => handleUpdateAd(ad.id, 'imageUrl', e.target.value)}/>
-                    <input type="text" placeholder="Destination URL (# for home)" className="w-full text-xs p-2 border rounded-lg bg-white outline-none focus:border-blue-500" value={ad.link} onChange={(e) => handleUpdateAd(ad.id, 'link', e.target.value)}/>
-                  </div>
-                ))}
+          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-8">
+            <h2 className="text-xl font-black mb-4 flex items-center gap-2 text-gray-900">
+              <i className="fas fa-bell text-blue-600"></i> Push Notifications
+            </h2>
+            <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100">
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <p className="font-bold text-gray-900">System Alerts</p>
+                  <p className="text-xs text-gray-500 mt-1">Receive desktop alerts when a visitor sends a lead.</p>
+                </div>
+                <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${notificationStatus === 'granted' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                  {notificationStatus === 'granted' ? 'Active' : 'Disabled'}
+                </div>
               </div>
+              <button 
+                onClick={requestNotificationPermission}
+                className="w-full bg-white border-2 border-blue-100 text-blue-700 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+              >
+                <i className="fas fa-hand-pointer"></i>
+                Enable Desktop Alerts
+              </button>
             </div>
-          </div>
 
-          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
-             <h2 className="text-xl font-black mb-4 flex items-center gap-2 text-gray-900">
+            <div className="pt-8 border-t">
+               <h2 className="text-xl font-black mb-4 flex items-center gap-2 text-gray-900">
                 <i className="fas fa-globe text-blue-600"></i> Identity Config
               </h2>
               <div className="space-y-4">
@@ -342,10 +402,27 @@ const CMSPanel: React.FC<CMSPanelProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Hotline</label>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Hotline (Include Area Code)</label>
                   <input type="text" className="w-full px-5 py-3 border-2 border-gray-100 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none text-xs font-bold" value={siteConfig.phone} onChange={(e) => onUpdateConfig({...siteConfig, phone: e.target.value})}/>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <h2 className="text-xl font-black mb-6 flex items-center gap-2 text-gray-900">
+              <i className="fas fa-info-circle text-blue-600"></i> Corporate Info
+            </h2>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">About Agency Text</label>
+                <textarea rows={6} className="w-full px-5 py-3 border-2 border-gray-100 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none text-xs leading-relaxed" value={siteConfig.aboutText} onChange={(e) => onUpdateConfig({...siteConfig, aboutText: e.target.value})}/>
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Footer Signature</label>
+                <input type="text" className="w-full px-5 py-3 border-2 border-gray-100 rounded-xl focus:ring-4 focus:ring-blue-100 outline-none text-xs font-bold" value={siteConfig.footerText} onChange={(e) => onUpdateConfig({...siteConfig, footerText: e.target.value})}/>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -390,7 +467,7 @@ const CMSPanel: React.FC<CMSPanelProps> = ({
                     <input type="text" className="w-full px-4 py-2 border-2 border-gray-50 rounded-xl outline-none text-xs font-bold" value={editingProperty.imageUrl} onChange={(e) => setEditingProperty({...editingProperty, imageUrl: e.target.value})}/>
                   </div>
                   {editingProperty.extraImages?.map((url, idx) => (
-                    <div key={idx} className="flex gap-2">
+                    <div key={idx} className="flex gap-2 animate-in fade-in slide-in-from-left-4">
                       <div className="flex-grow">
                         <label className="block text-[10px] uppercase font-bold text-gray-400 mb-1">Extra Image #{idx + 1}</label>
                         <input 
